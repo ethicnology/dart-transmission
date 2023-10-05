@@ -411,4 +411,55 @@ class Transmission {
     final response = TransmissionResponse.fromJSON(results.data);
     _checkResults(response);
   }
+
+  /// Sets various properties for a torrent.
+  ///
+  /// [arguments]: A map of arguments with keys representing the property names and values as follows:
+  ///
+  /// - "bandwidthPriority": The bandwidth priority of this torrent (tr_priority_t).
+  /// - "downloadLimit": The maximum download speed for the torrent in KBps.
+  /// - "downloadLimited": A boolean indicating whether the download speed limit is honored.
+  /// - "filesUnwanted": An array of indices representing file(s) to exclude from downloading.
+  /// - "filesWanted": An array of indices representing file(s) to download.
+  /// - "group": The name of the torrent's bandwidth group as a string.
+  /// - "honorsSessionLimits": A boolean indicating whether session upload limits are honored.
+  /// - "ids": An array representing the torrent list, as described in version 3.1.
+  /// - "labels": An array of string labels associated with the torrent.
+  /// - "location": The new location for the torrent's content as a string.
+  /// - "peerLimit": The maximum number of allowed peers for the torrent.
+  /// - "priorityHigh": An array of indices representing high-priority file(s).
+  /// - "priorityLow": An array of indices representing low-priority file(s).
+  /// - "priorityNormal": An array of indices representing normal-priority file(s).
+  /// - "queuePosition": The position of the torrent in its queue (0 to n).
+  /// - "seedIdleLimit": The torrent-level number of minutes of seeding inactivity.
+  /// - "seedIdleMode": The seeding inactivity mode to use (See tr_idlelimit).
+  /// - "seedRatioLimit": The torrent-level seeding ratio.
+  /// - "seedRatioMode": The seeding ratio mode to use (See tr_ratiolimit).
+  /// - "sequentialDownload": A boolean indicating whether to download torrent pieces sequentially.
+  /// - "trackerAdd": DEPRECATED - Use "trackerList" instead. An array of tracker URLs to add.
+  /// - "trackerList": A string containing announce URLs, one per line, with a blank line between tiers.
+  /// - "trackerRemove": DEPRECATED - Use "trackerList" instead. An array of tracker URLs to remove.
+  /// - "trackerReplace": DEPRECATED - Use "trackerList" instead. An array of tracker URLs to replace.
+  /// - "uploadLimit": The maximum upload speed for the torrent in KBps.
+  /// - "uploadLimited": A boolean indicating whether the upload speed limit is honored.
+  ///
+  /// Returns: The result of setting the torrent properties.
+  ///
+  /// Example:
+  /// ```dart
+  /// var result = setTorrent({
+  ///   "ids": '001d83eb39e7a31a21a4f229524ab484118b0665', //hash
+  ///   "bandwidthPriority": 1,
+  ///   "downloadLimit": 1024,
+  ///   "downloadLimited": true,
+  ///   "filesUnwanted": [2, 5, 7],
+  ///   // ... other parameters ...
+  /// });
+  /// ```
+  setTorrents({required Map<String, dynamic> args}) async {
+    final results = await _dio.post('/',
+        data: TransmissionRequest(methodSetTorrent, arguments: args).toJSON());
+    final response = TransmissionResponse.fromJSON(results.data);
+    _checkResults(response);
+  }
 }
