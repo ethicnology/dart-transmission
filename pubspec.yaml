@@ -1,7 +1,7 @@
 name: transmission
 description: Flutter package to talk to a Transmission torrent instance
 version: 0.1.1
-homepage: https://github.com/mylisabox/transmission
+homepage: https://github.com/ethicnology/dart-transmission
 
 environment:
   sdk: '>=2.12.0 <3.0.0'
