@@ -27,6 +27,8 @@ class Torrent {
 
   int? get status => _rawData['status'];
 
+  List<String> get trackerList => _rawData['trackerList'].split('\n\n');
+
   String get statusDescription {
     if (error != 0) {
       return 'Error';
