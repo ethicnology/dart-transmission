@@ -1,3 +1,5 @@
+import 'package:transmission/transmission.dart';
+
 class TransmissionResponse {
   final String? result;
   final Map<String, dynamic>? arguments;
@@ -6,8 +8,11 @@ class TransmissionResponse {
   TransmissionResponse(this.result, {this.arguments, this.tag});
 
   factory TransmissionResponse.fromJSON(Map<String, dynamic> data) {
-    return TransmissionResponse(data['result'],
-        arguments: data['arguments'], tag: data['tag']);
+    return TransmissionResponse(
+      data['result'],
+      arguments: data['arguments'],
+      tag: data['tag'],
+    );
   }
 
   TransmissionResponse copyWith({String? result}) {
@@ -15,9 +20,5 @@ class TransmissionResponse {
   }
 
   bool get isSuccess => result == 'success';
-
-  @override
-  String toString() {
-    return 'TransmissionResponse{result: $result, arguments: $arguments, tag: $tag}';
-  }
+  void check() => !isSuccess ? throw TransmissionException(this) : null;
 }

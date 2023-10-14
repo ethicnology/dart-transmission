@@ -1,25 +1,11 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
+import 'package:transmission/src/constants.dart';
 import 'package:transmission/transmission.dart';
 
 const csrfProtectionHeader = 'X-Transmission-Session-Id';
 const basicAuthentication = 'Authorization';
 const proxyBasicAuthentication = 'Proxy-Authorization';
-
-const methodAddTorrent = 'torrent-add';
-const methodRemoveTorrent = 'torrent-remove';
-const methodRenameTorrent = 'torrent-rename-path';
-const methodMoveTorrent = 'torrent-set-location';
-const methodGetTorrent = 'torrent-get';
-const methodSetTorrent = 'torrent-set';
-const methodSetSession = 'session-set';
-const methodGetSession = 'session-get';
-
-const methodStartTorrent = 'torrent-start';
-const methodStartNowTorrent = 'torrent-start-now';
-const methodStopTorrent = 'torrent-stop';
-const methodUpdateTorrent = 'torrent-reannounce';
-const methodVerifyTorrent = 'torrent-verify';
 
 extension RequestOptionsExtension on RequestOptions {
   Options toOptions() {
@@ -54,10 +40,8 @@ class Transmission {
     _tokenDio.options = _dio.options;
     String? csrfToken;
     if (enableLog) {
-      _dio.interceptors.add(LogInterceptor(
-        requestBody: true,
-        responseBody: true,
-      ));
+      _dio.interceptors
+          .add(LogInterceptor(requestBody: true, responseBody: true));
     }
     _dio.interceptors.add(
         InterceptorsWrapper(onRequest: (RequestOptions options, handler) async {
@@ -65,9 +49,9 @@ class Transmission {
         options.headers[csrfProtectionHeader] = csrfToken;
       }
       handler.next(options);
-    }, onError: (DioError error, handler) async {
+    }, onError: (DioException error, handler) async {
       if (error.response?.statusCode == 409) {
-        _dio.lock();
+        // _dio.lock();
         final options = error.requestOptions;
         // If the token has been updated, repeat directly.
         if (csrfToken != options.headers[csrfProtectionHeader]) {
@@ -87,14 +71,14 @@ class Transmission {
             onSendProgress: options.onSendProgress,
             queryParameters: options.queryParameters,
           );
-          _dio.unlock();
+          // _dio.unlock();
           handler.resolve(response);
-        } on DioError catch (err) {
-          _dio.unlock();
+        } on DioException catch (err) {
+          // _dio.unlock();
           handler.reject(err);
         } catch (err) {
           print(err);
-          _dio.unlock();
+          // _dio.unlock();
           handler.reject(error);
         }
         return;
@@ -107,17 +91,21 @@ class Transmission {
   /// [baseUrl] url of the transmission server instance, default to http://localhost:9091/transmission/rpc
   /// [proxyUrl] url use as a proxy, urls will be added at the end before request, default to null
   /// [enableLog] boolean to show http logs or not
-  factory Transmission(
-      {String? baseUrl,
-      String? proxyUrl,
-      bool enableLog = false,
-      String? username,
-      String? password}) {
+  factory Transmission({
+    String? baseUrl,
+    String? proxyUrl,
+    bool enableLog = false,
+    String? username,
+    String? password,
+  }) {
     baseUrl ??= 'http://localhost:9091/transmission/rpc';
-    Dio client = Dio(BaseOptions(
+    Dio client = Dio(
+      BaseOptions(
         baseUrl: proxyUrl == null
             ? baseUrl
-            : proxyUrl + Uri.encodeComponent(baseUrl)));
+            : proxyUrl + Uri.encodeComponent(baseUrl),
+      ),
+    );
     if (username != null && password != null) {
       String auth = base64.encode(utf8.encode('$username:$password'));
       if (proxyUrl != null) {
@@ -135,242 +123,6 @@ class Transmission {
     _tokenDio.close();
   }
 
-  /// Remove torrents by their given ids
-  /// [ids] integer identifier list of the torrents to remove
-  /// [deleteLocalData] boolean to also delete local data, default false
-  /// Throws [TransmissionException] if errors
-  Future<void> removeTorrents(
-    List<int> ids, {
-    bool deleteLocalData = false,
-  }) async {
-    final results = await _dio.post('/',
-        data: TransmissionRequest(methodRemoveTorrent, arguments: {
-          'ids': ids,
-          'delete-local-data': deleteLocalData,
-        }).toJSON());
-    _checkResults(TransmissionResponse.fromJSON(results.data));
-  }
-
-  /// Move torrents by their given ids
-  /// [ids] integer identifier list of the torrents to remove
-  /// [location] new location to move the torrent
-  /// [move] if true, move from previous location otherwise, search "location" for files, default false
-  /// Throws [TransmissionException] if errors
-  Future<void> moveTorrents(
-    List<int> ids,
-    String location, {
-    bool move = false,
-  }) async {
-    final results = await _dio.post('/',
-        data: TransmissionRequest(methodMoveTorrent, arguments: {
-          'ids': ids,
-          'location': location,
-          'move': move,
-        }).toJSON());
-    _checkResults(TransmissionResponse.fromJSON(results.data));
-  }
-
-  /// Rename torrent by given id
-  /// [id] of the torrent to rename
-  /// [name] new name
-  /// [path] old name
-  /// Throws [TransmissionException] if errors
-  Future<void> renameTorrent(
-    int id, {
-    String? name,
-    String? path,
-  }) async {
-    final results = await _dio.post('/',
-        data: TransmissionRequest(methodRenameTorrent, arguments: {
-          'ids': id,
-          if (path != null) 'path': path,
-          if (name != null) 'name': name,
-        }).toJSON());
-    _checkResults(TransmissionResponse.fromJSON(results.data));
-  }
-
-  /// Add torrent to transmission
-  /// [filename] optional filename or URL of the .torrent file
-  /// [metaInfo] optional base64-encoded .torrent content
-  /// [downloadDir] optional directory where to download the torrent
-  /// [cookies] optional pointer to a string of one or more cookies
-  /// [paused] optional boolean to paused the torrent when added
-  /// Returns [TorrentLight] light torrent info if added successfully
-  /// Throws [AddTorrentException] if errors
-  Future<TorrentLight> addTorrent({
-    String? filename,
-    String? metaInfo,
-    String? downloadDir,
-    String? cookies,
-    bool? paused,
-  }) async {
-    final results = await _dio.post('/',
-        data: TransmissionRequest(methodAddTorrent, arguments: {
-          if (filename != null) 'filename': filename,
-          if (metaInfo != null) 'metainfo': metaInfo,
-          if (downloadDir != null) 'download-dir': downloadDir,
-          if (cookies != null) 'cookies': cookies,
-          if (paused != null) 'paused': paused,
-        }).toJSON());
-    final response = TransmissionResponse.fromJSON(results.data);
-    if (response.isSuccess) {
-      if (response.arguments!['torrent-duplicate'] != null) {
-        throw AddTorrentException(
-            response.copyWith(result: 'Torrent duplicated'),
-            TorrentLight(response.arguments!['torrent-duplicate']));
-      } else {
-        return TorrentLight(response.arguments!['torrent-added']);
-      }
-    } else {
-      throw AddTorrentException(
-          response, TorrentLight(response.arguments!['torrent-duplicate']));
-    }
-  }
-
-  /// Stop torrents by given ids
-  /// [ids] integer identifier list of the torrents to remove
-  /// Throws [TransmissionException] if errors
-  Future<void> stopTorrents(List<int> ids) async {
-    final results = await _dio.post('/',
-        data: TransmissionRequest(methodStopTorrent, arguments: {
-          'ids': ids,
-        }).toJSON());
-    _checkResults(TransmissionResponse.fromJSON(results.data));
-  }
-
-  /// Start torrents now by given ids
-  /// [ids] integer identifier list of the torrents to remove
-  /// Throws [TransmissionException] if errors
-  Future<void> startNowTorrents(List<int> ids) async {
-    final results = await _dio.post('/',
-        data: TransmissionRequest(methodStartNowTorrent, arguments: {
-          'ids': ids,
-        }).toJSON());
-    _checkResults(TransmissionResponse.fromJSON(results.data));
-  }
-
-  /// Start torrents by given ids
-  /// [ids] integer identifier list of the torrents to remove
-  /// Throws [TransmissionException] if errors
-  Future<void> startTorrents(List<int> ids) async {
-    final results = await _dio.post('/',
-        data: TransmissionRequest(methodStartTorrent, arguments: {
-          'ids': ids,
-        }).toJSON());
-    _checkResults(TransmissionResponse.fromJSON(results.data));
-  }
-
-  /// Verify torrents by given ids
-  /// [ids] integer identifier list of the torrents to remove
-  /// Throws [TransmissionException] if errors
-  Future<void> verifyTorrents(List<int> ids) async {
-    final results = await _dio.post('/',
-        data: TransmissionRequest(methodVerifyTorrent, arguments: {
-          'ids': ids,
-        }).toJSON());
-    _checkResults(TransmissionResponse.fromJSON(results.data));
-  }
-
-  /// Ask for more peers for torrents by given ids
-  /// [ids] integer identifier list of the torrents to remove
-  /// Throws [TransmissionException] if errors
-  Future<void> askForMorePeers(List<int> ids) async {
-    final results = await _dio.post('/',
-        data: TransmissionRequest(methodUpdateTorrent, arguments: {
-          'ids': ids,
-        }).toJSON());
-    _checkResults(TransmissionResponse.fromJSON(results.data));
-  }
-
-  void _checkResults(TransmissionResponse response) {
-    if (!response.isSuccess) {
-      throw TransmissionException(response);
-    }
-  }
-
-  /// Get recently torrents activity
-  /// [fields] list of fields to retrieve
-  /// Returns list of [RecentlyActiveTorrent] that contain removed torrent ids or torrents update info
-  /// Throws [TransmissionException] if errors
-  Future<RecentlyActiveTorrent> getRecentlyActive({
-    List<String> fields = const [
-      'id',
-      'name',
-      'eta',
-      'queuePosition',
-      'downloadDir',
-      'isFinished',
-      'isStalled',
-      'leftUntilDone',
-      'metadataPercentComplete',
-      'error',
-      'errorString',
-      'percentDone',
-      'totalSize',
-      'peersConnected',
-      'sizeWhenDone',
-      'status',
-      'rateDownload',
-      'rateUpload',
-      'peersGettingFromUs',
-      'peersSendingToUs',
-    ],
-  }) async {
-    final results = await _dio.post('/',
-        data: TransmissionRequest(methodGetTorrent, arguments: {
-          'fields': fields,
-          'ids': 'recently-active',
-        }).toJSON());
-    final response = TransmissionResponse.fromJSON(results.data);
-    _checkResults(response);
-    final torrentsData = response.arguments!['torrents'];
-    final torrentsRemoved = response.arguments!['removed'];
-    return RecentlyActiveTorrent(
-      torrentsData
-          .map((data) => Torrent(data))
-          .cast<Torrent>()
-          .toList(growable: false),
-      torrentsRemoved?.cast<int>(),
-    );
-  }
-
-  /// Get data session, fields can be provided to get only needed information
-  /// [fields] to retrieve, can be checked at https://github.com/transmission/transmission/blob/master/extras/rpc-spec.txt
-  /// Returns [Map] of the session's data
-  /// Throws [TransmissionException] if errors
-  Future<Map<String, dynamic>> getSession({
-    List<String> fields = const [
-      'alt-speed-enabled',
-      'speed-limit-down-enabled',
-      'speed-limit-up-enabled',
-      'download-dir',
-      'speed-limit-down',
-      'speed-limit-up',
-      'alt-speed-down',
-      'alt-speed-up',
-      'version',
-    ],
-  }) async {
-    final results = await _dio.post('/',
-        data: TransmissionRequest(methodGetSession, arguments: {
-          'fields': fields,
-        }).toJSON());
-    final response = TransmissionResponse.fromJSON(results.data);
-    _checkResults(response);
-    return response.arguments!;
-  }
-
-  /// Set data session
-  /// [fields] to set, can be checked at https://github.com/transmission/transmission/blob/master/extras/rpc-spec.txt
-  /// Throws [TransmissionException] if errors
-  Future<void> setSession(Map<String, dynamic> fields) async {
-    final results = await _dio.post('/',
-        data:
-            TransmissionRequest(methodSetSession, arguments: fields).toJSON());
-    final response = TransmissionResponse.fromJSON(results.data);
-    _checkResults(response);
-  }
-
   /// Sets various properties for a torrent.
   ///
   /// [arguments]: A map of arguments with keys representing the property names and values as follows:
@@ -378,8 +130,8 @@ class Transmission {
   /// - "bandwidthPriority": The bandwidth priority of this torrent (tr_priority_t).
   /// - "downloadLimit": The maximum download speed for the torrent in KBps.
   /// - "downloadLimited": A boolean indicating whether the download speed limit is honored.
-  /// - "filesUnwanted": An array of indices representing file(s) to exclude from downloading.
-  /// - "filesWanted": An array of indices representing file(s) to download.
+  /// - [MISSING] "filesUnwanted": An array of indices representing file(s) to exclude from downloading.
+  /// - [MISSING] "filesWanted": An array of indices representing file(s) to download.
   /// - "group": The name of the torrent's bandwidth group as a string.
   /// - "honorsSessionLimits": A boolean indicating whether session upload limits are honored.
   /// - "ids": An array representing the torrent list, as described in version 3.1.
@@ -395,10 +147,7 @@ class Transmission {
   /// - "seedRatioLimit": The torrent-level seeding ratio.
   /// - "seedRatioMode": The seeding ratio mode to use (See tr_ratiolimit).
   /// - "sequentialDownload": A boolean indicating whether to download torrent pieces sequentially.
-  /// - "trackerAdd": DEPRECATED - Use "trackerList" instead. An array of tracker URLs to add.
   /// - "trackerList": A string containing announce URLs, one per line, with a blank line between tiers.
-  /// - "trackerRemove": DEPRECATED - Use "trackerList" instead. An array of tracker URLs to remove.
-  /// - "trackerReplace": DEPRECATED - Use "trackerList" instead. An array of tracker URLs to replace.
   /// - "uploadLimit": The maximum upload speed for the torrent in KBps.
   /// - "uploadLimited": A boolean indicating whether the upload speed limit is honored.
   ///
@@ -406,23 +155,83 @@ class Transmission {
   ///
   /// Example:
   /// ```dart
-  /// var result = setTorrent({
-  ///   "ids": '001d83eb39e7a31a21a4f229524ab484118b0665', //hash
-  ///   "bandwidthPriority": 1,
-  ///   "downloadLimit": 1024,
-  ///   "downloadLimited": true,
-  ///   "filesUnwanted": [2, 5, 7],
+  /// var result = set({
+  ///   ids: '001d83eb39e7a31a21a4f229524ab484118b0665',
+  ///   bandwidthPriority: 1,
+  ///   downloadLimit: 1024,
+  ///   downloadLimited: true,
+  ///   filesUnwanted: [2, 5, 7],
   ///   // ... other parameters ...
   /// });
   /// ```
-  setTorrents({required Map<String, dynamic> args}) async {
+  set({
+    // The bandwidth priority of this torrent
+    int? bandwidthPriority,
+    // The maximum download speed for the torrent in KBps.
+    int? downloadLimit,
+    // A boolean indicating whether the download speed limit is honored.
+    bool? downloadLimited,
+    // The name of the torrent's bandwidth group as a string
+    String? group,
+    // A boolean indicating whether session upload limits are honored
+    bool? honorsSessionLimits,
+    // An array representing the torrent list, as described
+    List<String>? ids,
+    // An array of string labels associated with the torrent
+    List<String>? labels,
+    // The new location for the torrent's content as a string
+    String? location,
+    // The maximum number of allowed peers for the torrent
+    int? peerLimit,
+    // An array of indices representing high-priority file(s)
+    List<int>? priorityHigh,
+    // An array of indices representing low-priority file(s)
+    List<int>? priorityLow,
+    // An array of indices representing normal-priority file(s)
+    List<int>? priorityNormal,
+    // The position of the torrent in its queue (0 to n).
+    int? queuePosition,
+    // The torrent-level seeding ratio
+    int? seedIdleLimit,
+    // The seeding inactivity mode to use (See tr_idlelimit)
+    int? seedIdleMode,
+    // The torrent-level seeding ratio
+    double? seedRatioLimit,
+    // The seeding ratio mode to use (See tr_ratiolimit)
+    int? seedRatioMode,
+    // A string containing announce URLs, one per line, with a blank line between tiers.
+    List<String>? trackerList,
+    //The maximum upload speed for the torrent in KBps.
+    int? uploadLimit,
+    // A boolean indicating whether the upload speed limit is honored
+    bool? uploadLimited,
+  }) async {
     final results = await _dio.post('/',
-        data: TransmissionRequest(
-          methodSetTorrent,
-          arguments: args,
-        ).toJSON());
+        data: TorrentRequest(TorrentAction.set, arguments: {
+          if (bandwidthPriority != null) 'bandwidthPriority': bandwidthPriority,
+          if (downloadLimit != null) 'downloadLimit': downloadLimit,
+          if (downloadLimited != null) 'downloadLimited': downloadLimited,
+          if (group != null) 'group': group,
+          if (honorsSessionLimits != null)
+            'honorsSessionLimits': honorsSessionLimits,
+          if (ids != null) 'ids': ids,
+          if (labels != null) 'labels': labels,
+          if (location != null) 'location': location,
+          if (peerLimit != null) 'peer-limit': peerLimit,
+          if (priorityHigh != null) 'priority-high': priorityHigh,
+          if (priorityLow != null) 'priority-low': priorityLow,
+          if (priorityNormal != null) 'priority-normal': priorityNormal,
+          if (queuePosition != null) 'queuePosition': queuePosition,
+          if (seedIdleLimit != null) 'seedIdleLimit': seedIdleLimit,
+          if (seedIdleMode != null) 'seedIdleMode': seedIdleMode,
+          if (seedRatioLimit != null) 'seedRatioLimit': seedRatioLimit,
+          if (seedRatioMode != null) 'seedRatioMode': seedRatioMode,
+          if (trackerList != null) 'trackerList': trackerList.join('\n\n'),
+          if (uploadLimit != null) 'uploadLimit': uploadLimit,
+          if (uploadLimited != null) 'uploadLimited': uploadLimited,
+        }).toJSON());
     final response = TransmissionResponse.fromJSON(results.data);
-    _checkResults(response);
+    response.check();
     return response;
   }
 
@@ -511,106 +320,166 @@ class Transmission {
   /// Example:
   /// ```dart
   /// var torrents = await getTorrents(
-  ///   "ids": ['001d83eb39e7a31a21a4f229524ab484118b0665', '2c1d0b8497d1f7e3250790633b2aa870ee8d8c2a'],
-  ///   "fields": ["id", "name", "status", "percentDone"],
-  ///   "format": 'objects',
+  ///   ids: ['001d83eb39e7a31a21a4f229524ab484118b0665', '2c1d0b8497d1f7e3250790633b2aa870ee8d8c2a'],
+  ///   fields: ["id", "name", "status", "percentDone"],
   /// );
   /// ```
-  Future<List<Torrent>> getTorrents({
+  Future<List<Torrent>> get({
     List<String>? ids,
-    List<String> fields = const [
-      "activityDate",
-      "addedDate",
-      "availability",
-      "bandwidthPriority",
-      "comment",
-      "corruptEver",
-      "creator",
-      "dateCreated",
-      "desiredAvailable",
-      "doneDate",
-      "downloadDir",
-      "downloadedEver",
-      "downloadLimit",
-      "downloadLimited",
-      "editDate",
-      "error",
-      "errorString",
-      "eta",
-      "etaIdle",
-      "file-count",
-      "files",
-      "fileStats",
-      "group",
-      "hashString",
-      "haveUnchecked",
-      "haveValid",
-      "honorsSessionLimits",
-      "id",
-      "isFinished",
-      "isPrivate",
-      "isStalled",
-      "labels",
-      "leftUntilDone",
-      "magnetLink",
-      "manualAnnounceTime",
-      "maxConnectedPeers",
-      "metadataPercentComplete",
-      "name",
-      "peer-limit",
-      "peers",
-      "peersConnected",
-      "peersFrom",
-      "peersGettingFromUs",
-      "peersSendingToUs",
-      "percentComplete",
-      "percentDone",
-      "pieces",
-      "pieceCount",
-      "pieceSize",
-      "priorities",
-      "primary-mime-type",
-      "queuePosition",
-      "rateDownload (B/s)",
-      "rateUpload (B/s)",
-      "recheckProgress",
-      "secondsDownloading",
-      "secondsSeeding",
-      "seedIdleLimit",
-      "seedIdleMode",
-      "seedRatioLimit",
-      "seedRatioMode",
-      "sequentialDownload",
-      "sizeWhenDone",
-      "startDate",
-      "status",
-      "trackers",
-      "trackerList",
-      "trackerStats",
-      "totalSize",
-      "torrentFile",
-      "uploadedEver",
-      "uploadLimit",
-      "uploadLimited",
-      "uploadRatio",
-      "wanted",
-      "webseeds",
-      "webseedsSendingToUs",
-    ],
+    List<String> fields = torrentGetFields,
+    bool recentlyActive = false,
   }) async {
     var arguments = {'fields': fields, 'format': 'objects'};
     if (ids != null) arguments['ids'] = ids;
+    if (recentlyActive) arguments['ids'] = 'recently-active';
+
     final results = await _dio.post('/',
-        data: TransmissionRequest(
-          methodGetTorrent,
-          arguments: arguments,
-        ).toJSON());
+        data: TorrentRequest(TorrentAction.get, arguments: arguments).toJSON());
     final response = TransmissionResponse.fromJSON(results.data);
-    _checkResults(response);
+    response.check();
     final torrentsData = response.arguments!['torrents'];
     return torrentsData
-        .map((data) => Torrent(data))
+        .map((data) => Torrent.fromJson(data))
         .cast<Torrent>()
         .toList(growable: false);
+  }
+
+  /// Add torrent to transmission
+  /// [cookies] pointer to a string of one or more cookies.
+  /// [downloadDir] path to download the torrent to
+  /// [filename] filename or URL of the .torrent file
+  /// [metainfo] optional base64-encoded .torrent content
+  /// [paused] if true, don't start the torrent
+  /// [peerLimit] maximum number of peers
+  /// [bandwidthPriority] torrent's bandwidth tr_priority_t
+  /// Returns [TorrentLight] light torrent info if added successfully
+  /// Throws [AddTorrentException] if errors
+  Future<TorrentLight> add({
+    String? cookies,
+    String? downloadDir,
+    String? filename,
+    String? metainfo,
+    bool? paused,
+    int? peerLimit,
+    int? bandwidthPriority,
+  }) async {
+    final results = await _dio.post('/',
+        data: TorrentRequest(TorrentAction.add, arguments: {
+          if (cookies != null) 'cookies': cookies,
+          if (downloadDir != null) 'download-dir': downloadDir,
+          if (filename != null) 'filename': filename,
+          if (metainfo != null) 'metainfo': metainfo,
+          if (paused != null) 'paused': paused,
+          if (peerLimit != null) 'peer-limit': peerLimit,
+          if (bandwidthPriority != null) 'bandwidthPriority': bandwidthPriority,
+        }).toJSON());
+    final response = TransmissionResponse.fromJSON(results.data);
+    if (response.isSuccess) {
+      if (response.arguments!['torrent-duplicate'] != null) {
+        throw AddTorrentException(
+            response.copyWith(result: 'Torrent duplicated'),
+            TorrentLight.fromJson(response.arguments!['torrent-duplicate']));
+      } else {
+        return TorrentLight.fromJson(response.arguments!['torrent-added']);
+      }
+    } else {
+      throw AddTorrentException(
+        response,
+        TorrentLight.fromJson(response.arguments!['torrent-duplicate']),
+      );
+    }
+  }
+
+  /// Remove torrents by their given ids
+  /// [ids] SHA1 hash list of the torrents
+  /// [deleteLocalData] delete local data. (default: false)
+  /// Throws [TransmissionException] if errors
+  Future<void> remove(
+      {required List<String> ids, bool deleteLocalData = false}) async {
+    final results = await _dio.post('/',
+        data: TorrentRequest(TorrentAction.remove,
+                arguments: {'ids': ids, 'delete-local-data': deleteLocalData})
+            .toJSON());
+    TransmissionResponse.fromJSON(results.data).check();
+  }
+
+  /// Move torrents by their given ids
+  /// [ids] SHA1 hash list of the torrents
+  /// [location] the new torrent location
+  /// [move] if true, move from previous location. otherwise, search "location" for files (default: false)
+  /// Throws [TransmissionException] if errors
+  Future<void> move({
+    required List<int> ids,
+    required String location,
+    bool move = false,
+  }) async {
+    final results = await _dio.post('/',
+        data: TorrentRequest(TorrentAction.setLocation, arguments: {
+          'ids': ids,
+          'location': location,
+          'move': move,
+        }).toJSON());
+    TransmissionResponse.fromJSON(results.data).check();
+  }
+
+  /// Rename torrent by given id
+  /// [id] of the torrent to rename
+  /// [path] the path to the file or folder that will be renamed
+  /// [name] the file or folder's new name
+  /// Throws [TransmissionException] if errors
+  Future<void> renamePath({
+    required String id,
+    String? path,
+    String? name,
+  }) async {
+    final results = await _dio.post('/',
+        data: TorrentRequest(TorrentAction.renamePath, arguments: {
+          'ids': id,
+          if (path != null) 'path': path,
+          if (name != null) 'name': name,
+        }).toJSON());
+    TransmissionResponse.fromJSON(results.data).check();
+  }
+
+  /// Torrent action requests
+  /// | Method name            | libtransmission function
+  /// |:--|:--
+  /// | `torrent-start`        | tr_torrentStart
+  /// | `torrent-start-now`    | tr_torrentStartNow
+  /// | `torrent-stop`         | tr_torrentStop
+  /// | `torrent-verify`       | tr_torrentVerify
+  /// | `torrent-verify-force` | tr_torrentVerifyForce
+  /// | `torrent-reannounce`   | tr_torrentManualUpdate ("ask tracker for more peers")
+  Future<void> _action(List<String>? ids, TorrentAction action) async {
+    Map<String, dynamic> arguments = {};
+    if (ids != null) arguments['ids'] = ids;
+
+    final results = await _dio.post('/',
+        data: TorrentRequest(action, arguments: arguments).toJSON());
+    TransmissionResponse.fromJSON(results.data).check();
+  }
+
+  Future<void> start({List<String>? ids}) async {
+    _action(ids, TorrentAction.start);
+  }
+
+  Future<void> startNow({List<String>? ids}) async {
+    _action(ids, TorrentAction.startNow);
+  }
+
+  Future<void> stop({List<String>? ids}) async {
+    _action(ids, TorrentAction.stop);
+  }
+
+  Future<void> verify({List<String>? ids}) async {
+    _action(ids, TorrentAction.verify);
+  }
+
+  Future<void> verifyForce({List<String>? ids}) async {
+    _action(ids, TorrentAction.verifyForce);
+  }
+
+  Future<void> reannounce({List<String>? ids}) async {
+    _action(ids, TorrentAction.reannounce);
   }
 }
