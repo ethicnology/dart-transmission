@@ -409,7 +409,7 @@ class Transmission {
   /// [move] if true, move from previous location. otherwise, search "location" for files (default: false)
   /// Throws [TransmissionException] if errors
   Future<void> move({
-    required List<int> ids,
+    required List<String> ids,
     required String location,
     bool move = false,
   }) async {

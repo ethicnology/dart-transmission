@@ -244,7 +244,7 @@ class Torrent {
       ..trackers = List<Tracker>.from(
         (json['trackers'] ?? []).map((tracker) => Tracker.fromJson(tracker)),
       )
-      ..trackerList = json['trackerList'].split('\n')
+      ..trackerList = json['trackerList'].split('\n\n')
       ..trackerStats = List<TrackerStats>.from(
         (json['trackerStats'] ?? [])
             .map((trackerStats) => TrackerStats.fromJson(trackerStats)),
@@ -328,7 +328,7 @@ class Torrent {
       'startDate': startDate,
       'status': status?.code,
       'trackers': trackers?.map((tracker) => tracker.toJson()).toList(),
-      'trackerList': trackerList,
+      'trackerList': trackerList?.join('\n\n'),
       'trackerStats':
           trackerStats?.map((trackerStats) => trackerStats.toJson()).toList(),
       'totalSize': totalSize,
