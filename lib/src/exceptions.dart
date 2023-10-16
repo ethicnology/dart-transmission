@@ -7,7 +7,7 @@ class TransmissionException {
 
   @override
   String toString() {
-    return 'TransmissionException($cause)';
+    return 'TransmissionException(${cause.result})';
   }
 }
 
@@ -18,6 +18,6 @@ class AddTorrentException extends TransmissionException {
 
   @override
   String toString() {
-    return 'AddTorrentException($cause, $torrent)';
+    return 'AddTorrentException(${cause.result}, $torrent)';
   }
 }

@@ -1,10 +1,4 @@
-import 'package:transmission/src/file.dart';
-import 'package:transmission/src/file_stats.dart';
-import 'package:transmission/src/peer.dart';
-import 'package:transmission/src/peer_from.dart';
-import 'package:transmission/src/status.dart';
-import 'package:transmission/src/tracker.dart';
-import 'package:transmission/src/tracker_stat.dart';
+import 'package:transmission/transmission.dart';
 
 /// | Key | Value Type | transmission.h source
 /// |:--|:--|:--

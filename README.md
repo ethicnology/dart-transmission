@@ -1,54 +1,67 @@
 # transmission
 
-Dart package to talk to a Transmission torrent instance, for a flutter package including UI widget please check [transmission](https://github.com/mylisabox/flutter_transmission)
+Re-implementation of [Transmission RPC Specification](https://github.com/transmission/transmission/blob/main/docs/rpc-spec.md)
 
-## Getting Started
-
-Create an instance of `Transmission`, you can then use it in any data state management you want (bloc, provider, mobx...)
+## Usage
 
 ```dart
-final transmission = Transmission(
-  baseUrl: 'http://192.168.1.35:9091/transmission/rpc',
-  enableLog: true,
-);
-``` 
+import 'package:transmission/transmission.dart';
+import 'package:dotenv/dotenv.dart';
 
-By default baseUrl uses `http://localhost:9091/transmission/rpc`.
+main() async {
+  var env = DotEnv(includePlatformEnvironment: true)..load();
+  if (!env.isEveryDefined(['URL', 'USER', 'PASS'])) return;
 
-Once you have that you can simply interact with transmission's data like torrents or settings.
+  // without credentials
+  var transmission = Transmission(url: env['URL']!);
 
-## Simple examples
+  // with basic auth credentials –> use HTTPS or SSH tunnels
+  transmission = Transmission(
+      url: env['URL']!, username: env['USER']!, password: env['PASS']!);
 
-### Getting torrents
+  const hash = '001d83eb39e7a31a21a4f229524ab484118b0665';
 
-```dart
-final torrents = await transmission.getTorrents();
-print(torrents);
-``` 
+  // get all torrents
+  List<Torrent> torrents = await transmission.torrent.get();
+  print('torrents: ${torrents.length}');
 
-### Adding torrent
+  // get a specific torrents based on their SHA1 hashString
+  torrents = await transmission.torrent.get(ids: <String>[hash]);
+  print('torrents: ${torrents.length}');
 
-```dart
-await transmission.addTorrent(filename: 'https://myUrlMagnet');
-``` 
+  // get recently active torrents
+  torrents = await transmission.torrent.get(recentlyActive: true);
+  print('torrents: ${torrents.length}');
 
-### Start torrents
+  // start specific torrents
+  await transmission.torrent.start(ids: [hash]);
+  await transmission.torrent.stop(ids: [hash]);
+  await transmission.torrent.verify(ids: [hash]);
+  await transmission.torrent.startNow(ids: [hash]);
 
-```dart
-final torrents = await transmission.getTorrents();
-await transmission.startTorrents([torrents.first.id]);
-```
+  // using directly TorrentRequest from transmission.torrent
+  TorrentRequest torrent = transmission.torrent;
+  await torrent.reannounce(ids: [hash]);
 
-### Stop torrents
+  // I leave the next-ones commented because I'm executing this file
+  // as a test on my own server and i don't want to move, rename or remove torrents
 
-```dart
-final torrents = await transmission.getTorrents();
-await transmission.stopTorrents([torrents.first.id]);
-``` 
+  // await torrent.verifyForce(ids: [hash]);
+  // await torrent.renamePath(id: 'hash', path: '/path/to', name: 'something');
+  // await torrent.move(ids: ['hash'], location: '/path/to', move: false);
+  // await torrent.remove(ids: ['hash'], deleteLocalData: false);
 
-### Remove torrents
+  // set a tracker for two torrents
+  await torrent.set(
+      ids: <String>[hash],
+      trackerList: ['udp://public.popcorn-tracker.org:6969/announce']);
 
-```dart
-final torrents = await transmission.getTorrents();
-await transmission.removeTorrents([torrents.first.id]);
+  // get session
+  var mySession = await transmission.session.get(fields: sessionGetAllFields);
+  print(mySession.downloadDir);
+
+  // update session parameters
+  mySession.altSpeedEnabled = false;
+  await transmission.session.set(mySession);
+}
 ``` 
