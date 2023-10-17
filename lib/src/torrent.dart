@@ -54,8 +54,8 @@ import 'package:transmission/transmission.dart';
 /// | `priorities`| array (see below)| n/a
 /// | `primary-mime-type`| string| tr_torrent
 /// | `queuePosition`| number| tr_stat
-/// | `rateDownload (B/s)`| number| tr_stat
-/// | `rateUpload (B/s)`| number| tr_stat
+/// | `rateDownload`| number| tr_stat
+/// | `rateUpload`| number| tr_stat
 /// | `recheckProgress`| double| tr_stat
 /// | `secondsDownloading`| number| tr_stat
 /// | `secondsSeeding`| number| tr_stat
@@ -222,8 +222,8 @@ class Torrent {
       ..priorities = List<int>.from(json['priorities'] ?? [])
       ..primaryMimeType = json['primary-mime-type']
       ..queuePosition = json['queuePosition']
-      ..rateDownload = json['rateDownload (B/s)']
-      ..rateUpload = json['rateUpload (B/s)']
+      ..rateDownload = json['rateDownload']
+      ..rateUpload = json['rateUpload']
       ..recheckProgress = double.tryParse(json['recheckProgress'].toString())
       ..secondsDownloading = json['secondsDownloading']
       ..secondsSeeding = json['secondsSeeding']
@@ -308,8 +308,8 @@ class Torrent {
       'priorities': priorities,
       'primary-mime-type': primaryMimeType,
       'queuePosition': queuePosition,
-      'rateDownload (B/s)': rateDownload,
-      'rateUpload (B/s)': rateUpload,
+      'rateDownload': rateDownload,
+      'rateUpload': rateUpload,
       'recheckProgress': recheckProgress,
       'secondsDownloading': secondsDownloading,
       'secondsSeeding': secondsSeeding,
