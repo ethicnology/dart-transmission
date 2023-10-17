@@ -90,9 +90,9 @@ class Transmission {
   }
 
   /// Documentation about the API at https://github.com/transmission/transmission/blob/master/extras/rpc-spec.txt
-  /// [baseUrl] url of the transmission server instance, default to http://localhost:9091/transmission/rpc
+  /// [url] url of the transmission server instance, default to http://localhost:9091/transmission/rpc
   /// [proxyUrl] url use as a proxy, urls will be added at the end before request, default to null
-  /// [_log] boolean to show http logs or not
+  /// [log] boolean to show http logs or not
   factory Transmission({
     String url = 'http://localhost:9091',
     String username = '',
@@ -101,7 +101,6 @@ class Transmission {
     bool log = false,
   }) {
     url = '$url/transmission/rpc';
-    print(url);
 
     Dio client = Dio(
       BaseOptions(

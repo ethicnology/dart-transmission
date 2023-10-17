@@ -337,11 +337,10 @@ class Torrent {
     };
   }
 
-  String? get prettyRateDownload => _prettySize(rateDownload!);
-  String? get prettyRateUpload => _prettySize(rateUpload!);
-  String? get prettyTotalSize => _prettySize(totalSize!);
-  String? get prettyLeftUntilDone => _prettySize(leftUntilDone!);
-  String? get prettyCurrentSize => _prettySize(totalSize! - leftUntilDone!);
+  String? get prettyRateDownload => _prettySize(rateDownload);
+  String? get prettyRateUpload => _prettySize(rateUpload);
+  String? get prettyTotalSize => _prettySize(totalSize);
+  String? get prettyLeftUntilDone => _prettySize(leftUntilDone);
   String? _prettySize(int? octets, {decimal = 2}) {
     if (octets == null) return null;
     if (octets < 1000) {
