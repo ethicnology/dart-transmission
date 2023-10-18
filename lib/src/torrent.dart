@@ -103,7 +103,7 @@ class Torrent {
   List<File>? files;
   List<FileStats>? fileStats;
   String? group;
-  String? hashString;
+  String? hash;
   int? haveUnchecked;
   int? haveValid;
   bool? honorsSessionLimits;
@@ -190,7 +190,7 @@ class Torrent {
             .map((fileStat) => FileStats.fromJson(fileStat)),
       )
       ..group = json['group']
-      ..hashString = json['hashString']
+      ..hash = json['hashString']
       ..haveUnchecked = json['haveUnchecked']
       ..haveValid = json['haveValid']
       ..honorsSessionLimits = json['honorsSessionLimits']
@@ -279,7 +279,7 @@ class Torrent {
       'files': files?.map((file) => file.toJson()).toList(),
       'fileStats': fileStats?.map((fileStat) => fileStat.toJson()).toList(),
       'group': group,
-      'hashString': hashString,
+      'hashString': hash,
       'haveUnchecked': haveUnchecked,
       'haveValid': haveValid,
       'honorsSessionLimits': honorsSessionLimits,

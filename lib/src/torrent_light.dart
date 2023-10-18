@@ -4,15 +4,15 @@
 class TorrentLight {
   int? id;
   String? name;
-  String? hashString;
+  String? hash;
 
-  TorrentLight({this.id, this.name, this.hashString});
+  TorrentLight({this.id, this.name, this.hash});
 
   factory TorrentLight.fromJson(Map<String, dynamic> json) {
     return TorrentLight(
       id: json['id'],
       name: json['name'],
-      hashString: json['hashString'],
+      hash: json['hashString'],
     );
   }
 }
