@@ -341,16 +341,16 @@ class Torrent {
   String? get prettyRateUpload => _prettySize(rateUpload);
   String? get prettyTotalSize => _prettySize(totalSize);
   String? get prettyLeftUntilDone => _prettySize(leftUntilDone);
-  String? _prettySize(int? octets, {decimal = 2}) {
-    if (octets == null) return null;
-    if (octets < 1000) {
-      return '$octets o';
-    } else if (octets >= 1000 && octets < 1000000) {
-      return '${(octets / 1000).toStringAsFixed(decimal)} Ko';
-    } else if (octets >= 1000000 && octets < 1000000000) {
-      return '${(octets / 1000000).toStringAsFixed(decimal)} Mo';
+  String? _prettySize(int? bytes, {decimal = 2}) {
+    if (bytes == null) return null;
+    if (bytes < 1000) {
+      return '$bytes B';
+    } else if (bytes >= 1000 && bytes < 1000000) {
+      return '${(bytes / 1000).toStringAsFixed(decimal)} Kb';
+    } else if (bytes >= 1000000 && bytes < 1000000000) {
+      return '${(bytes / 1000000).toStringAsFixed(decimal)} Mb';
     } else {
-      return '${(octets / 1000000000).toStringAsFixed(decimal)} Go';
+      return '${(bytes / 1000000000).toStringAsFixed(decimal)} Gb';
     }
   }
 }
